@@ -122,6 +122,28 @@ END$$
 DELIMITER ;
 
 
+-- Calculate each employee's hours after a shift is updated
+DELIMITER $$
+
+CREATE TRIGGER shift_update_calculate_hours
+AFTER UPDATE ON Shifts
+FOR EACH ROW
+BEGIN
+    UPDATE Employees e
+    SET e.Hours = (
+        SELECT COALESCE(SUM(s.Shift_Duration), 0)
+        FROM Schedule c
+        JOIN Shifts s ON c.Sid = s.Sid
+        WHERE c.Eid = e.Eid
+    )
+    WHERE e.Eid IN (
+        SELECT c.Eid FROM Schedule c WHERE c.Sid = NEW.Sid
+    );
+END$$
+
+DELIMITER ;
+
+
 -- View an individual's shifts
 CREATE VIEW view_shifts AS
 SELECT Shift_Type, Start_Time, End_Time, Shift_Date
